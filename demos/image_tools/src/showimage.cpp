@@ -27,6 +27,22 @@
 
 #include "image_tools/options.hpp"
 
+// for json
+//#include <iostream>
+//#include <sstream>
+#include <fstream>
+#include <json_lib/json11.hpp>
+
+// for date
+#include <iomanip>
+
+bool save_camera;
+std::string save_image_dir, image_name, save_image_path;
+int interval;
+int count_interval = 1;
+int image_num = 1;
+
+
 /// Convert a sensor_msgs::Image encoding type (stored as a string) to an OpenCV encoding type.
 /**
  * \param[in] encoding A string representing the encoding type.
@@ -54,6 +70,51 @@ encoding2mat_type(const std::string & encoding)
   }
 }
 
+void set_param(){
+	// jsonファイルを読み込み
+        ifstream fin("../image_tools.json");
+        if( !fin ){
+            if (std_out) cout << "\e[31m parameter file (.json) load failed \e[0m" << std::endl;
+            return;
+        }
+        if (std_out) cout << "parameter file (.json) loaded" << std::endl;
+
+        stringstream strstream;
+        strstream << fin.rdbuf();
+        fin.close();
+        string jsonstr(strstream.str());
+
+        string err;
+        auto json = json11::Json::parse(jsonstr, err);
+        save_camera = json["save_camera"].bool_value();
+	save_image_dir = json["save_image_dir"].string_value();
+	image_name = json["image_name"].string_value();
+	interval = json["interval"].int_value();
+
+	// for date
+	time_t t = time(nullptr);
+	const tm* localTime = localtime(&t);
+	std::stringstream s;
+	s << localTime->tm_year + 1900;
+	s << setw(2) << setfill('0') << localTime->tm_mon + 1;
+	s << setw(2) << setfill('0') << localTime->tm_mday;
+
+	save_image_path << save_image_dir << image_name << s.str();
+}
+
+void save_image(const cv::Mat frame){
+	if (count_interval < interval){
+		count_interval++;
+		return;
+	}
+	std::stringstream num;
+	num << setw(4) << setfill('0') << image_num;
+	save_image_path << num.str() << ".png";
+	cv::imwrite(save_image_path, frame)
+	count_interval = 1;
+	image_num++;
+}
+
 /// Convert the ROS Image message to an OpenCV matrix and display it to the user.
 // \param[in] msg The image message to show.
 void show_image(
@@ -77,6 +138,9 @@ void show_image(
 
     cv::Mat cvframe = frame;
 
+    if (save_camera){
+	    save_image(frame);
+    }
     // Show the image in a window called "showimage".
     cv::imshow("showimage", cvframe);
     // Draw the screen and wait for 1 millisecond.
@@ -95,6 +159,7 @@ int main(int argc, char * argv[])
   rmw_qos_history_policy_t history_policy = rmw_qos_profile_default.history;
   bool show_camera = true;
   std::string topic("image");
+  set_param();
 
   // Force flush of the stdout buffer.
   // This ensures a correct sync of all prints

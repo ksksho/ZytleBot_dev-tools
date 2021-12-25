@@ -1,0 +1,6 @@
+{
+	"save_camera": true,
+	"save_image_dir": "~/zytlebot/images/",
+	"image_name": "pcam_",
+	"interval": 100
+}
