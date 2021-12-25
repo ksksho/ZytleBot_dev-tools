@@ -98,6 +98,8 @@ void set_param(){
 	s << localTime->tm_year + 1900;
 	s << setw(2) << setfill('0') << localTime->tm_mon + 1;
 	s << setw(2) << setfill('0') << localTime->tm_mday;
+	s << setw(2) << setfill('0') << localTime->tm_hour;
+	s << setw(2) << setfill('0') << localTime->tm_min;
 
 	save_image_path << save_image_dir << image_name << s.str();
 }
